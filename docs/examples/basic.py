@@ -11,7 +11,7 @@ with h5py.File('mydata.hdf5', 'w') as data:
     y = x ** 2
 
     handle = ax.plot(x, y, color='r', label='myplot')
-    osp.write_h5py(data, 'data', handle)
+    osp.dump(data, 'data', handle)
 
     data['by'] = osp.info()
 

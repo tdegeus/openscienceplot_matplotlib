@@ -18,9 +18,12 @@ import matplotlib.pyplot as plt
 import matplotlib
 import numpy as np
 import h5py
+import operator
+import functools
+from functools import singledispatch
 
 
-__version__ = '0.1.0'
+__version__ = '0.2.0'
 
 
 def info():
@@ -33,13 +36,69 @@ Return basic library information.
         'matplotlib={0:s}'.format(matplotlib.__version__)]
 
 
-def write_h5py(data, key, handle):
+@singledispatch
+def dump(handle):
     r'''
-Save plot data to HDF5-file.
+Return to be stored data from a handle.
+
+Essential attributes are outputted as well, as follows:
+
+*   matplotlib.lines.Line2D ('artist'): 'color', `linestyle', 'marker', 'label'.
+*   matplotlib.container.ErrorbarContainer ('artist'): 'color', `linestyle', 'marker', 'label'.
+    Warning: for now saved as matplotlib.lines.Line2D, without error-bars.
+
+:argument:
+
+    **handle**
+        The object's handle.
+
+:return:
+
+    **data** (``<numpy.ndarray>``)
+        The data.
+
+    **attributes** (``<dict>``)
+        Essential attributes.
+    '''
+
+    import warnings
+
+    if len(handle) == 1:
+        handle = handle[0]
+
+    if isinstance(handle, matplotlib.lines.Line2D):
+        return (
+            handle.get_xydata(),
+            {
+                "artist" : 'matplotlib.lines.Line2D',
+                "color" : handle.get_color(),
+                "linestyle" : handle.get_linestyle(),
+                "marker" : handle.get_marker(),
+                "label" : handle.get_label(),
+            })
+
+    if isinstance(handle, matplotlib.container.ErrorbarContainer):
+        warnings.warn('Error-bars not saved, help wanted.', Warning)
+        return (
+            handle.get_xydata(),
+            {
+                "artist" : 'matplotlib.lines.Line2D',
+                "color" : handle[0].get_color(),
+                "linestyle" : handle[0].get_linestyle(),
+                "marker" : handle[0].get_marker(),
+            })
+
+    raise IOError('Unknown handle. Please consider filing a bug-report.')
+
+
+@dump.register(h5py.File)
+def _(f, key, handle):
+    r'''
+Save plot and attributes to HDF5-file.
 
 :arguments:
 
-    **data** (``h5py.File``)
+    **f** (``<h5py.File>``)
         Opened HDF5 file.
 
     **key** (``<str>``)
@@ -49,37 +108,44 @@ Save plot data to HDF5-file.
         The handle to write.
     '''
 
-    import warnings
+    data, attributes = dump(handle)
 
-    if key == '/':
-        raise IOError('Cannot write to root')
+    dset = f.create_dataset(key, data.shape, dtype=data.dtype)
+    dset[:] = data
 
-    if len(handle) == 1:
-        handle = handle[0]
+    for key in attributes:
+        dset.attrs[key] = attributes[key]
 
-    if isinstance(handle, matplotlib.lines.Line2D):
-        xy = handle.get_xydata()
-        dset = data.create_dataset(key, xy.shape, dtype=xy.dtype)
-        dset[:, :] = xy
-        dset.attrs['artist'] = 'matplotlib.lines.Line2D'
-        dset.attrs['color'] = handle.get_color()
-        dset.attrs['linestyle'] = handle.get_linestyle()
-        dset.attrs['marker'] = handle.get_marker()
-        dset.attrs['label'] = handle.get_label()
-        return
 
-    if isinstance(handle, matplotlib.container.ErrorbarContainer):
-        xy = handle[0].get_xydata()
-        dset = data.create_dataset(key, xy.shape, dtype=xy.dtype)
-        dset[:, :] = xy
-        dset.attrs['artist'] = 'matplotlib.lines.Line2D'
-        dset.attrs['color'] = handle[0].get_color()
-        dset.attrs['linestyle'] = handle[0].get_linestyle()
-        dset.attrs['marker'] = handle[0].get_marker()
-        warnings.warn('Error-bars not saved, help wanted.', Warning)
-        return
+@dump.register(dict)
+def _(f, key, handle):
+    r'''
+Save plot and attributes to a dictionary.
 
-    raise IOError('Unknown handle. Please consider filing a bug-report.')
+:arguments:
+
+    **f** (``<dict>``)
+        Dictionary.
+
+    **key** (``<str>`` | ``<list>``)
+        Name of the dataset to which to write.
+        Path separated by "/", or as list.
+
+    **handle**
+        The handle to write.
+
+:returns:
+
+    Dictionary.
+    '''
+
+    if type(key) == str:
+        key = list(filter(None, key.split("/")))
+
+    data, attributes = dump(handle)
+    attributes["data"] = data
+
+    functools.reduce(operator.getitem, key[:-1], f)[key[-1]] = attributes
 
 
 def restore_h5py(data, key, axis=None):
