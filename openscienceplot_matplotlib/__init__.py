@@ -23,9 +23,6 @@ import functools
 from functools import singledispatch
 
 
-__version__ = '0.2.0'
-
-
 def info():
     r'''
 Return basic library information.
@@ -88,7 +85,7 @@ Essential attributes are outputted as well, as follows:
                 "marker" : handle[0].get_marker(),
             })
 
-    raise IOError('Unknown handle. Please consider filing a bug-report.')
+    raise IOError('Unknown handle. Store manually, or consider filing a bug-report.')
 
 
 @dump.register(h5py.File)
