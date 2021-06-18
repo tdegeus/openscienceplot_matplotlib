@@ -77,7 +77,7 @@ Essential attributes are outputted as well, as follows:
     if isinstance(handle, matplotlib.container.ErrorbarContainer):
         warnings.warn('Error-bars not saved, help wanted.', Warning)
         return (
-            handle.get_xydata(),
+            handle[0].get_xydata(),
             {
                 "artist" : 'matplotlib.lines.Line2D',
                 "color" : handle[0].get_color(),
