@@ -58,15 +58,37 @@ Essential attributes are outputted as well, as follows:
             })
 
     if isinstance(handle, matplotlib.container.ErrorbarContainer):
-        warnings.warn('Error-bars not saved, help wanted.', Warning)
-        return (
-            handle[0].get_xydata(),
-            {
-                "artist" : 'matplotlib.lines.Line2D',
-                "color" : handle[0].get_color(),
-                "linestyle" : handle[0].get_linestyle(),
-                "marker" : handle[0].get_marker(),
-            })
+
+        data = handle[0].get_xydata()
+        xerr = None
+        yerr = None
+
+        for i in handle[2]:
+            seg = np.array(i.get_segments())
+            x = seg[:, :, 0]
+            y = seg[:, :, 1]
+            assert x.shape[0] == y.shape[0] == data.shape[0]
+            if np.allclose(x[:, 0], x[:, 1]):
+                yerr = np.abs(data[:, 1] - y.T)
+            elif np.allclose(y[:, 0], y[:, 1]):
+                xerr = np.abs(data[:, 0] - x.T)
+            else:
+                raise IOError("Unknown data")
+
+        attributes = {
+            "artist" : 'matplotlib.lines.Line2D',
+            "color" : handle[0].get_color(),
+            "linestyle" : handle[0].get_linestyle(),
+            "marker" : handle[0].get_marker(),
+        }
+
+        if xerr is not None:
+            attributes["xerr"] = xerr
+
+        if yerr is not None:
+            attributes["yerr"] = yerr
+
+        return (data, attributes)
 
     raise IOError('Unknown handle. Store manually, or consider filing a bug-report.')
 
@@ -166,6 +188,14 @@ Restore plot from HDF5-file.
         for key in ['color', 'linestyle', 'marker', 'label']:
             if key in dset.attrs:
                 opts[key] = dset.attrs[key]
+
+        e = {}
+        for key in ["xerr", "yerr"]:
+            if key in dset.attrs:
+                e[key] = dset.attrs[key][...]
+
+        if len(e) > 0:
+            return axis.errorbar(xy[:, 0], xy[:, 1], **e, **opts)
 
         return axis.plot(xy, **opts)
 
