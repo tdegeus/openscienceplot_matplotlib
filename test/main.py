@@ -30,6 +30,11 @@ class Test_plot(unittest.TestCase):
             self.assertTrue(np.allclose(x, xy[:, 0]))
             self.assertTrue(np.allclose(y, xy[:, 1]))
 
+            # todo: add assertions
+            fig, ax = plt.subplots()
+            h = osp.restore_h5py(plot_data, "mycurve", axis=ax)
+            plt.close(fig)
+
         for f in [filename]:
             os.remove(f)
 
@@ -67,6 +72,11 @@ class Test_errorbar(unittest.TestCase):
             self.assertTrue(np.allclose(yerr, e[0, :]))
             self.assertTrue(np.allclose(yerr, e[1, :]))
 
+            # todo: add assertions
+            fig, ax = plt.subplots()
+            h = osp.restore_h5py(plot_data, "mycurve", axis=ax)
+            plt.close(fig)
+
         os.remove(filename)
 
     def test_only_xerr(self):
@@ -96,6 +106,11 @@ class Test_errorbar(unittest.TestCase):
             self.assertTrue(np.allclose(xerr, e[1, :]))
 
             self.assertTrue("yerr" not in plot_data['mycurve'].attrs)
+
+            # todo: add assertions
+            fig, ax = plt.subplots()
+            h = osp.restore_h5py(plot_data, "mycurve", axis=ax)
+            plt.close(fig)
 
         os.remove(filename)
 
@@ -127,6 +142,11 @@ class Test_errorbar(unittest.TestCase):
 
             self.assertTrue("xerr" not in plot_data['mycurve'].attrs)
 
+            # todo: add assertions
+            fig, ax = plt.subplots()
+            h = osp.restore_h5py(plot_data, "mycurve", axis=ax)
+            plt.close(fig)
+
         os.remove(filename)
 
     def test_asymmetric(self):
@@ -157,6 +177,11 @@ class Test_errorbar(unittest.TestCase):
 
             e = plot_data['mycurve'].attrs["yerr"][...]
             self.assertTrue(np.allclose(yerr, e))
+
+            # todo: add assertions
+            fig, ax = plt.subplots()
+            h = osp.restore_h5py(plot_data, "mycurve", axis=ax)
+            plt.close(fig)
 
         os.remove(filename)
 

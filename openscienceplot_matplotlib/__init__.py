@@ -195,7 +195,7 @@ Restore plot from HDF5-file.
                 e[key] = dset.attrs[key][...]
 
         if len(e) > 0:
-            return axis.errorbar(xy, **e, **opts)
+            return axis.errorbar(xy[:, 0], xy[:, 1], **e, **opts)
 
         return axis.plot(xy, **opts)
 
